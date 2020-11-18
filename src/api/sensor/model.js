@@ -9,7 +9,6 @@ const crossingSessions = new Schema({
     red: [{
         sensor_id: String,
         date: Date,
-        location: [],
         road_type: String,
         direction: String
     }]
