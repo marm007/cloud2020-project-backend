@@ -3,7 +3,7 @@ const {
     getSensorInformation,
     getLastCrossingSession,
     getLastWeatherConditions,
-    getAverageTemperatureFromDay,
+    getHistogramTemperatureFromToday,
     getHistogramDataFromCrossingSessions
 } = require('./controller');
 
@@ -22,6 +22,6 @@ router.get('/weather/last',
     getLastWeatherConditions);
 
 router.get('/weather/average',
-    getAverageTemperatureFromDay);
+    getHistogramTemperatureFromToday);
 
 module.exports = router;

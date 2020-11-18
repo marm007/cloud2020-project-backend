@@ -21,6 +21,8 @@ const getLastCrossingSession = ({query}, res, next) => {
         .catch(next);
 };
 
+const dayWithData = new moment('2020-11-18').startOf('day').toDate();
+
 const getLastWeatherConditions = ({query}, res, next) => {
     const numberOfMeasurements = query.number ? parseInt(query.number) : 10;
     const vmName = query.vm_name ? {vm_name: query.vm_name} : {};
@@ -31,9 +33,19 @@ const getLastWeatherConditions = ({query}, res, next) => {
         .catch(next);
 };
 
-const getAverageTemperatureFromDay = ({query}, res, next) => {
+const getHistogramTemperatureFromToday = async ({query}, res, next) => {
     let today = moment().startOf('day').toDate();
-    const vmName = query.vm_name ? {vm_name: query.vm_name} : {};
+    const vmName = query.vm_name ? query.vm_name : '';
+
+    const result = await WeatherModel.find({
+        "date": {
+            "$gte": new Date(today.setHours(0, 0, 0)),
+            "$lt": new Date(today.setHours(23, 59, 59))
+        }
+    }).limit(1).exec()
+
+    if(result.length === 0)
+        today = dayWithData
 
     WeatherModel.aggregate([
         {
@@ -42,25 +54,44 @@ const getAverageTemperatureFromDay = ({query}, res, next) => {
                     "$gte": new Date(today.setHours(0, 0, 0)),
                     "$lt": new Date(today.setHours(23, 59, 59))
                 },
-                vmName
+                vm_name: vmName
             }
         },
         {
             $group: {
-                _id: "weather",
+                _id: {$hour: "$date"},
                 count: {$sum: 1},
                 avg_temperature: {$avg: "$temperature"}
             }
+        },
+        {
+            $sort: {"_id": 1}
         }
     ])
         .then(notFound(res))
+        .then((temperature) => temperature.map(data => {
+            console.log(data)
+            const label = data._id.toString() + "-" + (data._id + 1).toString();
+            data = {label, ...data};
+            return data;
+        }))
         .then(success(res))
         .catch(next);
 };
 
-const getHistogramDataFromCrossingSessions = ({query}, res, next) => {
-    const today = moment().startOf('day').toDate();
+const getHistogramDataFromCrossingSessions = async ({query}, res, next) => {
+    let today = moment().startOf('day').toDate();
     const vmName = query.vm_name ? query.vm_name : '';
+
+    const result = await WeatherModel.find({
+        "date": {
+            "$gte": new Date(today.setHours(0, 0, 0)),
+            "$lt": new Date(today.setHours(23, 59, 59))
+        }
+    }).limit(1).exec()
+
+    if(result.length === 0)
+        today = dayWithData
 
     const match = {
         "start_date": {
@@ -126,6 +157,6 @@ module.exports = {
     getSensorInformation,
     getLastCrossingSession,
     getLastWeatherConditions,
-    getAverageTemperatureFromDay,
+    getHistogramTemperatureFromToday,
     getHistogramDataFromCrossingSessions
 };
